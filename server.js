@@ -15,7 +15,8 @@ app.post("/generate", async (req, res) => {
 
   const { className, subject, chapter, difficulty, type, count } = req.body;
 
-  const prompt = `
+  // ✅ BASE PROMPT
+  let prompt = `
 Generate ${count} ${type} questions for a school exam.
 
 Class: ${className}
@@ -26,8 +27,13 @@ Difficulty: ${difficulty}
 Rules:
 - Numbered questions
 - No explanation
-- If MCQ, include 4 options
 - Keep questions clear and syllabus-based
+`;
+
+  // ✅ ONLY ADD ANSWER KEY FOR MCQ
+  if(type === "mcq"){
+    prompt += `
+- Include 4 options (a, b, c, d)
 
 IMPORTANT:
 At the end, provide the answer key in this exact format:
@@ -37,6 +43,7 @@ Answer Key:
 2. b
 3. d
 `;
+  }
 
   try {
 
