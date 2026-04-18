@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Roboxis Question Paper Generator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+
+body{
+  font-family:'Segoe UI',sans-serif;
+  margin:0;
+  background:#eef2f7;
+}
+
+header{
+  background:white;
+  padding:20px;
+  text-align:center;
+  font-size:24px;
+  font-weight:700;
+  color:#111827;
+  border-bottom:1px solid #e5e7eb;
+}
+
+#successMsg{
+  font-size:14px;
+  color:#16a34a;
+  margin-top:6px;
+  display:none;
+}
+
+.container{
+  max-width:850px;
+  margin:30px auto;
+  background:white;
+  padding:30px;
+  border-radius:14px;
+  box-shadow:0 15px 35px rgba(0,0,0,0.06);
+}
+
+input, select, textarea{
+  width:100%;
+  padding:12px;
+  margin-top:12px;
+  border-radius:8px;
+  border:1px solid #d1d5db;
+}
+
+.row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:15px;
+}
+
+.btn{
+  margin-top:20px;
+  padding:14px;
+  background:#2563eb;
+  color:white;
+  border:none;
+  width:100%;
+  cursor:pointer;
+  border-radius:10px;
+}
+
+.btn.secondary{
+  background:#16a34a;
+}
+
+.paper{
+  max-width:850px;
+  margin:40px auto;
+  background:white;
+  padding:50px;
+  display:none;
+}
+
+.paper h2{
+  text-align:center;
+}
+
+.exam-name{
+  text-align:center;
+  font-weight:600;
+}
+
+.meta{
+  display:flex;
+  justify-content:space-between;
+}
+
+.footer{
+  position:absolute;
+  bottom:15px;
+  right:20px;
+  font-size:10px;
+}
+
+.actions{
+  text-align:center;
+}
+
+.actions button{
+  margin:10px;
+}
+
+@media print{
+  @page{
+    size:A4;
+    margin:20mm 15mm;
+  }
+
+  body *{ visibility:hidden; }
+  .paper, .paper *{ visibility:visible; }
+
+  header, .container, .actions{ display:none; }
+
+  .footer{
+    position:fixed;
+    bottom:10mm;
+    right:10mm;
+  }
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+  Roboxis Question Paper Generator
+  <div id="successMsg">
+    Question paper generated successfully, scroll down to see the paper
+  </div>
+</header>
+
+<div class="container">
+
+<input type="text" id="school" placeholder="School Name *">
+<input type="text" id="examName" placeholder="Examination Name (Optional)">
+
+<div class="row">
+<input type="text" id="class" placeholder="Class *">
+<input type="text" id="subject" placeholder="Subject *">
+</div>
+
+<input type="text" id="chapter" placeholder="Chapter Name *">
+
+<div class="row">
+<input type="number" id="questions" placeholder="No. of Questions *" max="30">
+<select id="type">
+<option value="mcq">MCQ</option>
+<option value="subjective">Subjective</option>
+</select>
+</div>
+
+<select id="difficulty">
+<option>Easy</option>
+<option>Medium</option>
+<option>Hard</option>
+</select>
+
+<div class="row">
+<input type="text" id="time" placeholder="Time (Optional)">
+<input type="number" id="marks" placeholder="Total Marks (Optional)">
+</div>
+
+<textarea id="instructions" placeholder="Exam Instructions (Optional)"></textarea>
+
+<button class="btn" onclick="generatePaper()">Generate Question Paper</button>
+
+</div>
+
+<div class="paper" id="paper">
+
+<div id="paperContent"></div>
+
+<div class="actions">
+<button class="btn secondary" onclick="window.print()">Download Question Paper</button>
+<button class="btn" onclick="downloadSolution()">Download Solution</button>
+</div>
+
+<div class="footer">Powered by Roboxis</div>
+
+</div>
+
+<script>
+
+async function generatePaper(){
+
+  const school = document.getElementById("school").value;
+  const examName = document.getElementById("examName").value;
+  const cls = document.getElementById("class").value;
+  const subject = document.getElementById("subject").value;
+  const chapter = document.getElementById("chapter").value;
+  const q = parseInt(document.getElementById("questions").value);
+  const marks = document.getElementById("marks").value;
+  const type = document.getElementById("type").value;
+  const difficulty = document.getElementById("difficulty").value;
+  const time = document.getElementById("time").value;
+  const instructions = document.getElementById("instructions").value;
+
+  if(!school || !cls || !subject || !chapter || !q){
+    alert("Please fill all mandatory fields");
+    return;
+  }
+
+  if(q > 30){
+    alert("Maximum 30 questions allowed");
+    return;
+  }
+
+  document.getElementById("paperContent").innerHTML = "<p>Generating questions...</p>";
+
+  try {
+
+    const res = await fetch("http://localhost:3000/generate", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        className: cls,
+        subject,
+        chapter,
+        difficulty,
+        type,
+        count: q
+      })
+    });
+
+    const data = await res.json();
+
+    document.getElementById("paperContent").innerHTML = `
+      <h2>${school}</h2>
+      ${examName ? `<div class="exam-name">${examName}</div>` : ""}
+
+      <p style="text-align:center; font-weight:600;">
+        Class: ${cls} | Subject: ${subject}
+      </p>
+
+      <div class="meta">
+        <span>${time ? "Time: " + time : ""}</span>
+        <span>${marks ? "Total Marks: " + marks : ""}</span>
+      </div>
+
+      ${instructions ? `<p><b>Instructions:</b><br>${instructions}</p>` : ""}
+
+      <hr>
+
+      ${formatQuestions(data.result)}
+    `;
+
+    document.getElementById("paper").style.display = "block";
+    document.getElementById("successMsg").style.display = "block";
+
+    setTimeout(()=>{
+      document.getElementById("paper").scrollIntoView({behavior:"smooth"});
+    },100);
+
+  } catch (err){
+    alert("Error connecting to AI");
+    console.log(err);
+  }
+}
+
+function formatQuestions(text){
+
+  const questions = text.split(/\d+\.\s/).filter(q => q.trim() !== "");
+
+  let formatted = "";
+
+  questions.forEach((q, index) => {
+
+    const parts = q.split(/([a-d]\))/);
+
+    let questionText = parts[0].trim();
+
+    formatted += `<p><b>${index+1}. ${questionText}</b><br>`;
+
+    for(let i=1; i<parts.length; i+=2){
+      if(parts[i+1]){
+        formatted += `${parts[i]} ${parts[i+1].trim()}<br>`;
+      }
+    }
+
+    formatted += `</p>`;
+  });
+
+  return formatted;
+}
+
+function downloadSolution(){
+
+  const content = document.getElementById("paperContent").innerHTML;
+
+  const win = window.open('', '', 'height=800,width=800');
+
+  win.document.write(`
+    <html>
+    <head>
+      <title>Solution</title>
+      <style>
+        body{font-family:Segoe UI; padding:40px;}
+      </style>
+    </head>
+    <body>
+      ${content}
+      <hr>
+      <h3>Solutions</h3>
+      <p>Solutions will be generated here using AI.</p>
+    </body>
+    </html>
+  `);
+
+  win.document.close();
+  win.print();
+}
+
+</script>
+
+</body>
+</html>
