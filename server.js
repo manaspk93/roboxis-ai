@@ -8,7 +8,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔐 Secure API key (NO hardcoding)
+// 🔐 Secure API key
 const API_KEY = process.env.OPENAI_API_KEY;
 
 app.post("/generate", async (req, res) => {
@@ -28,6 +28,14 @@ Rules:
 - No explanation
 - If MCQ, include 4 options
 - Keep questions clear and syllabus-based
+
+IMPORTANT:
+At the end, provide the answer key in this exact format:
+
+Answer Key:
+1. a
+2. b
+3. d
 `;
 
   try {
@@ -64,7 +72,6 @@ Rules:
 
 });
 
-// 🔥 IMPORTANT for deployment
 app.listen(process.env.PORT || 3000, () => {
   console.log("Server running...");
 });
